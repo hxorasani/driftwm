@@ -468,8 +468,8 @@ impl DriftWm {
                 }
             }
             Action::ZoomIn => {
-                let new_zoom = (self.zoom() * self.config.zoom_step).min(canvas::MAX_ZOOM);
-                let new_zoom = canvas::snap_zoom(new_zoom);
+                let new_zoom = (self.zoom() * self.config.zoom_step).min(self.config.max_zoom);
+                let new_zoom = canvas::snap_zoom(new_zoom).min(self.config.max_zoom);
                 self.zoom_to_anchored(new_zoom);
             }
             Action::ZoomOut => {
@@ -478,7 +478,7 @@ impl DriftWm {
                 self.zoom_to_anchored(new_zoom);
             }
             Action::ZoomReset => {
-                self.zoom_to_anchored(1.0);
+                self.zoom_to_anchored(self.config.default_zoom);
             }
             Action::ZoomToFit => {
                 if self.try_restore_overview() {
@@ -836,7 +836,7 @@ impl DriftWm {
         self.user_moved_camera();
         let usable = self.get_usable_area();
         let vc = self.usable_center_screen();
-        let fit_zoom = canvas::zoom_to_fit(bbox, usable.size, self.config.zoom_fit_padding);
+        let fit_zoom = canvas::zoom_to_fit(bbox, usable.size, self.config.zoom_fit_padding, self.config.max_zoom);
         let bbox_cx = bbox.loc.x as f64 + bbox.size.w as f64 / 2.0;
         let bbox_cy = bbox.loc.y as f64 + bbox.size.h as f64 / 2.0;
         let new_camera: Point<f64, smithay::utils::Logical> =
