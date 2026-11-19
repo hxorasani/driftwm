@@ -8,7 +8,7 @@ use smithay::{
 
 use super::{DriftWm, StageWindow, output_state};
 use crate::grabs::SizeConstraints;
-use driftwm::canvas::{MAX_ZOOM, ScreenPos, screen_to_canvas};
+use driftwm::canvas::{ScreenPos, screen_to_canvas};
 use driftwm::config;
 use driftwm::layout::snap::SnapRect;
 use driftwm::stage::FillSaved;
@@ -300,11 +300,11 @@ impl DriftWm {
         let bounds_w = saved.viewport_bounds.x_high - saved.viewport_bounds.x_low;
         let bounds_h = saved.viewport_bounds.y_high - saved.viewport_bounds.y_low;
         // Non-finite is rejected explicitly, not implied by the sign test. A NaN
-        // rect fails every comparison below, so it would reach `.min(MAX_ZOOM)`
+        // rect fails every comparison below, so it would reach `.min(self.config.max_zoom)`
         // — which launders the NaN zoom back into 1.0 while the camera comes out
         // `(NaN, NaN)` and is written to `camera_target` and the zoom anchor. An
         // infinite one instead *passes* `> 0.0` and divides to `zoom == 0.0`,
-        // which clears the aspect and `MAX_ZOOM` checks and then inverts to the
+        // which clears the aspect and `self.config.max_zoom` checks and then inverts to the
         // same `±inf`/`NaN` camera the zero-size usable area below guards
         // against.
         if !(bounds_w > 0.0 && bounds_h > 0.0 && bounds_w.is_finite() && bounds_h.is_finite()) {
@@ -314,7 +314,7 @@ impl DriftWm {
         let usable = self.usable_area_on(output);
         // Exclusive zones can consume both axes (smithay floors a zone's size at
         // 0), and `0 x 0` divides to `zoom_x == zoom_y == 0.0`: the aspect check
-        // compares 0.0 with itself and passes, so does the `MAX_ZOOM` reject, and
+        // compares 0.0 with itself and passes, so does the `self.config.max_zoom` reject, and
         // out comes a `±inf` — `NaN` where `usable.loc` is 0 — camera beside a
         // `zoom_target` of 0.0 that `set_zoom` does not clamp, wedging the
         // output's transform. Plain centering survives that state. Only the total
@@ -335,13 +335,13 @@ impl DriftWm {
         // `bounds_w` is `(loc.x + w)/zoom + cam.x - (loc.x/zoom + cam.x)` — off
         // by ~1 ulp from `w/zoom` when the terms straddle a binade boundary. At
         // the overwhelmingly common zoom 1.0 that lands `zoom_x` at
-        // `1.0 ± ~1e-15`, so a strict `> MAX_ZOOM` reject would restore for some
+        // `1.0 ± ~1e-15`, so a strict `> self.config.max_zoom` reject would restore for some
         // camera positions and center for others. Reject past the epsilon, then
         // clamp below, so the camera uses the zoom the animation lands on.
-        if zoom_x > MAX_ZOOM + 1e-9 {
+        if zoom_x > self.config.max_zoom + 1e-9 {
             return None;
         }
-        let zoom = zoom_x.min(MAX_ZOOM);
+        let zoom = zoom_x.min(self.config.max_zoom);
 
         Some((
             Point::from((
