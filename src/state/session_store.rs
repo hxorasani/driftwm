@@ -132,7 +132,7 @@ impl DriftWm {
         self.session_store.durable_cameras = envelope
             .outputs
             .iter()
-            .filter(|(_, o)| valid_camera_seed(Point::from((o.camera[0], o.camera[1])), o.zoom))
+            .filter(|(_, o)| valid_camera_seed(Point::from((o.camera[0], o.camera[1])), o.zoom, self.config.max_zoom))
             .map(|(name, o)| {
                 (
                     name.clone(),
@@ -754,10 +754,10 @@ pub(crate) const POSITION_LIMIT: i32 = 1_050_000_000;
 /// within a sane canvas range and a zoom inside the real zoom bounds. An
 /// invalid seed (`zoom: 0.0`, non-finite, corruption) is skipped so it can't
 /// warp the pointer to infinity or divide every canvas conversion by zero.
-pub(crate) fn valid_camera_seed(camera: Point<f64, Logical>, zoom: f64) -> bool {
+pub(crate) fn valid_camera_seed(camera: Point<f64, Logical>, zoom: f64, max_zoom: f64) -> bool {
     within_window_range(camera.x, camera.y)
         && zoom.is_finite()
-        && (driftwm::canvas::MIN_ZOOM_FLOOR..=driftwm::canvas::MAX_ZOOM).contains(&zoom)
+        && (driftwm::canvas::MIN_ZOOM_FLOOR..=max_zoom).contains(&zoom)
 }
 
 pub(crate) fn valid_canvas_point(x: f64, y: f64) -> bool {
@@ -891,14 +891,14 @@ mod tests {
     #[test]
     fn camera_seed_rejects_bad_zoom_and_nonfinite() {
         let cam = Point::from((-960.0, -540.0));
-        assert!(valid_camera_seed(cam, 1.0));
-        assert!(!valid_camera_seed(cam, 0.0), "zero zoom breaks canvas math");
-        assert!(!valid_camera_seed(cam, -1.0));
-        assert!(!valid_camera_seed(cam, f64::INFINITY));
-        assert!(!valid_camera_seed(cam, f64::NAN));
-        assert!(!valid_camera_seed(cam, 1000.0), "beyond MAX_ZOOM");
-        assert!(!valid_camera_seed(Point::from((f64::NAN, 0.0)), 1.0));
-        assert!(!valid_camera_seed(Point::from((1e12, 0.0)), 1.0));
+        assert!(valid_camera_seed(cam, 1.0, 1.0));
+        assert!(!valid_camera_seed(cam, 0.0, 1.0), "zero zoom breaks canvas math");
+        assert!(!valid_camera_seed(cam, -1.0, 1.0));
+        assert!(!valid_camera_seed(cam, f64::INFINITY, 1.0));
+        assert!(!valid_camera_seed(cam, f64::NAN, 1.0));
+        assert!(!valid_camera_seed(cam, 1000.0, 1.0), "beyond MAX_ZOOM");
+        assert!(!valid_camera_seed(Point::from((f64::NAN, 0.0)), 1.0, 1.0));
+        assert!(!valid_camera_seed(Point::from((1e12, 0.0)), 1.0, 1.0));
     }
 
     #[test]
@@ -949,14 +949,14 @@ mod tests {
         let camera = CameraSeed::Center { x: 0.0, y: 0.0 }.resolve(0.0, logical);
         assert!(!camera.x.is_finite() && !camera.y.is_finite());
         assert!(
-            !valid_camera_seed(camera, 1.0),
+            !valid_camera_seed(camera, 1.0, 1.0),
             "a non-finite camera is refused even under a sane zoom"
         );
 
         // A centre inside the window range can still resolve past it.
         let edge = -f64::from(POSITION_LIMIT);
         let camera = CameraSeed::Center { x: edge, y: 0.0 }.resolve(0.5, logical);
-        assert!(!valid_camera_seed(camera, 0.5));
+        assert!(!valid_camera_seed(camera, 0.5, 1.0));
     }
 
     #[test]
