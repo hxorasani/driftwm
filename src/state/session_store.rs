@@ -896,7 +896,9 @@ mod tests {
         assert!(!valid_camera_seed(cam, -1.0, 1.0));
         assert!(!valid_camera_seed(cam, f64::INFINITY, 1.0));
         assert!(!valid_camera_seed(cam, f64::NAN, 1.0));
-        assert!(!valid_camera_seed(cam, 1000.0, 1.0), "beyond MAX_ZOOM");
+        assert!(!valid_camera_seed(cam, 1000.0, 1.0), "beyond configured maximum");
+        assert!(valid_camera_seed(cam, 3.0, 3.0), "custom maximum is accepted");
+        assert!(!valid_camera_seed(cam, 3.1, 3.0), "above custom maximum is rejected");
         assert!(!valid_camera_seed(Point::from((f64::NAN, 0.0)), 1.0, 1.0));
         assert!(!valid_camera_seed(Point::from((1e12, 0.0)), 1.0, 1.0));
     }
