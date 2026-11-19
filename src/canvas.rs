@@ -9,7 +9,7 @@ use crate::layout::snap::SnapRect;
 
 /// Hard floor for zoom — prevents division by zero / absurd values.
 pub const MIN_ZOOM_FLOOR: f64 = 0.001;
-/// Maximum zoom level (100% — native resolution, no magnification).
+/// Default maximum zoom level (100% — native resolution, no magnification).
 pub const MAX_ZOOM: f64 = 1.0;
 
 /// A position in screen-local coordinates (0,0 = top-left of the output).
@@ -445,12 +445,13 @@ pub fn zoom_to_fit(
     bbox: Rectangle<i32, Logical>,
     viewport_size: Size<i32, Logical>,
     padding: f64,
+    max_zoom: f64,
 ) -> f64 {
     let avail_w = (viewport_size.w as f64 - padding * 2.0).max(1.0);
     let avail_h = (viewport_size.h as f64 - padding * 2.0).max(1.0);
     let zoom_x = avail_w / bbox.size.w.max(1) as f64;
     let zoom_y = avail_h / bbox.size.h.max(1) as f64;
-    zoom_x.min(zoom_y).clamp(MIN_ZOOM_FLOOR, MAX_ZOOM)
+    zoom_x.min(zoom_y).clamp(MIN_ZOOM_FLOOR, max_zoom)
 }
 
 /// Dynamic minimum zoom based on the current window layout.
@@ -460,11 +461,12 @@ pub fn dynamic_min_zoom(
     windows: impl Iterator<Item = (Point<i32, Logical>, Size<i32, Logical>)>,
     viewport_size: Size<i32, Logical>,
     padding: f64,
+    max_zoom: f64,
 ) -> f64 {
     let bbox =
         all_windows_bbox(windows).unwrap_or_else(|| Rectangle::new((-2, -2).into(), (5, 5).into()));
     // Allow zooming out to 50% beyond the fit zoom for breathing room
-    let fit = zoom_to_fit(bbox, viewport_size, padding);
+    let fit = zoom_to_fit(bbox, viewport_size, padding, max_zoom);
     (fit * 0.5).max(MIN_ZOOM_FLOOR)
 }
 
