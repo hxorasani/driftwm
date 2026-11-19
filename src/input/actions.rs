@@ -474,7 +474,7 @@ impl DriftWm {
             }
             Action::ZoomOut => {
                 let new_zoom = (self.zoom() / self.config.zoom_step).max(self.min_zoom());
-                let new_zoom = canvas::snap_zoom(new_zoom);
+                let new_zoom = canvas::snap_zoom(new_zoom).min(self.config.max_zoom);
                 self.zoom_to_anchored(new_zoom);
             }
             Action::ZoomReset => {
