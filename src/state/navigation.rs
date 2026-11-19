@@ -393,8 +393,8 @@ impl DriftWm {
         self.set_camera_anchor(output, anchor_canvas, anchor_screen, target_zoom);
     }
 
-    /// The zoom a navigation animates to on `output`: 1.0 when `reset_zoom`
-    /// (intentional navigation), else the zoom the view is heading to. The
+    /// The zoom a navigation animates to on `output`: configured default when
+    /// `reset_zoom` (intentional navigation), else the zoom the view is heading to. The
     /// live zoom would stop a zoom animation where this frame caught it.
     pub(crate) fn navigation_target_zoom(&self, output: &Output, reset_zoom: bool) -> f64 {
         if reset_zoom {
