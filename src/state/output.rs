@@ -167,7 +167,7 @@ impl DriftWm {
         // camera instead of an inf/NaN viewport.
         if let Some(&(seed, saved_zoom)) = saved.get(&output.name()) {
             let saved_cam = seed.resolve(saved_zoom, logical);
-            if super::session_store::valid_camera_seed(saved_cam, saved_zoom) {
+            if super::session_store::valid_camera_seed(saved_cam, saved_zoom, self.config.max_zoom) {
                 let mut os = output_state(output);
                 os.camera = saved_cam;
                 os.zoom = saved_zoom;

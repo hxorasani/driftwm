@@ -1724,7 +1724,7 @@ impl DriftWm {
                         let cur_zoom = self.zoom();
                         let base_zoom = self.zoom_target().unwrap_or(cur_zoom);
                         let target_zoom =
-                            (base_zoom * factor).clamp(self.min_zoom(), canvas::MAX_ZOOM);
+                            (base_zoom * factor).clamp(self.min_zoom(), self.config.max_zoom);
 
                         if target_zoom != base_zoom {
                             self.user_moved_camera();

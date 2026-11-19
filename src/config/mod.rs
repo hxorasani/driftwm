@@ -207,6 +207,10 @@ pub struct Config {
     /// Modifiers held during Alt-Tab window cycling, derived from the
     /// `cycle-windows forward` binding. Releasing them commits the selection.
     pub cycle_hold: Modifiers,
+    /// Zoom used by reset and intentional navigation.
+    pub default_zoom: f64,
+    /// Maximum permitted zoom level.
+    pub max_zoom: f64,
     /// Zoom step multiplier per keypress. 1.1 = 10% per press.
     pub zoom_step: f64,
     /// Touchscreen gesture zoom speed multiplier.
@@ -218,10 +222,10 @@ pub struct Config {
     /// Padding (viewport/screen pixels) around the bounding box for ZoomToFit.
     /// Screen-space so the gutter is consistent regardless of the resulting zoom.
     pub zoom_fit_padding: f64,
-    /// Animate zoom back to 1.0 when a new window is mapped
+    /// Animate zoom back to default_zoom when a new window is mapped
     /// (true) or preserve current zoom (false).
     pub zoom_reset_on_new_window: bool,
-    /// Animate zoom back to 1.0 when an off-screen window requests activation
+    /// Animate zoom back to default_zoom when an off-screen window requests activation
     /// (xdg-activation or foreign-toplevel click) (true) or just pan to it at current zoom (false).
     pub zoom_reset_on_activation: bool,
     /// Zoom threshold (1.0 = 100%) below which canvas windows stop receiving
@@ -526,6 +530,29 @@ impl Config {
                 }
             },
         };
+
+        let max_zoom = match raw.zoom.max_zoom {
+            Some(value) if value.is_finite() && value >= crate::canvas::MIN_ZOOM_FLOOR => value,
+            Some(value) => {
+                collect_warn(
+                    &mut errors,
+                    format!(
+                        "config: zoom.max_zoom {value} must be finite and at least {}, using {}",
+                        crate::canvas::MIN_ZOOM_FLOOR,
+                        crate::canvas::MAX_ZOOM
+                    ),
+                );
+                crate::canvas::MAX_ZOOM
+            }
+            None => crate::canvas::MAX_ZOOM,
+        };
+        let default_zoom = clamp_warn(
+            raw.zoom.default_zoom.unwrap_or(1.0),
+            crate::canvas::MIN_ZOOM_FLOOR,
+            max_zoom,
+            "zoom.default_zoom",
+            &mut errors,
+        );
 
         let mut disable_keys = false;
         let mut disable_mouse = false;
@@ -1151,6 +1178,8 @@ impl Config {
             auto_navigate_on_close: raw.navigation.auto_navigate_on_close.unwrap_or(true),
             auto_navigate_on_click: raw.navigation.auto_navigate_on_click.unwrap_or(false),
             cycle_hold,
+            default_zoom,
+            max_zoom,
             zoom_step: non_negative(raw.zoom.step.unwrap_or(1.1), "zoom.step", &mut errors),
             zoom_touch_speed: non_negative(
                 raw.zoom.touch_speed.unwrap_or(1.0),
@@ -1174,13 +1203,12 @@ impl Config {
             ),
             zoom_reset_on_new_window: raw.zoom.reset_on_new_window.unwrap_or(false),
             zoom_reset_on_activation: raw.zoom.reset_on_activation.unwrap_or(true),
-            // clamp_warn (not non_negative): folds NaN into the below-min branch
-            // → 0.0 → off, and rejects values above MAX_ZOOM rather than
-            // silently accepting a threshold no zoom can ever fall below.
+            // clamp_warn folds NaN into the below-min branch and rejects thresholds
+            // above the configured maximum zoom.
             zoom_interact_min: clamp_warn(
                 raw.zoom.interact_min.unwrap_or(0.5),
                 0.0,
-                crate::canvas::MAX_ZOOM,
+                max_zoom,
                 "zoom.interact_min",
                 &mut errors,
             ),
@@ -1559,6 +1587,52 @@ mod tests {
         let (_config, warnings) = Config::from_toml_collect(toml_str).unwrap();
         assert!(warnings[0].contains("font_weight"), "got: {warnings:?}");
         assert!(warnings.iter().any(|w| w.contains("accel_speed")));
+    }
+
+    #[test]
+    fn zoom_defaults_preserve_existing_behavior() {
+        let config = Config::default();
+        assert_eq!(config.default_zoom, 1.0);
+        assert_eq!(config.max_zoom, crate::canvas::MAX_ZOOM);
+    }
+
+    #[test]
+    fn zoom_range_is_configurable_and_default_is_clamped_to_it() {
+        let (config, warnings) = Config::from_toml_collect(
+            r#"
+            [zoom]
+            default_zoom = 0.75
+            max_zoom = 3.0
+        "#,
+        )
+        .unwrap();
+        assert_eq!(config.default_zoom, 0.75);
+        assert_eq!(config.max_zoom, 3.0);
+        assert!(warnings.is_empty(), "unexpected warnings: {warnings:?}");
+
+        let (config, warnings) = Config::from_toml_collect(
+            r#"
+            [zoom]
+            default_zoom = 4.0
+            max_zoom = 2.0
+        "#,
+        )
+        .unwrap();
+        assert_eq!(config.default_zoom, 2.0);
+        assert!(warnings.iter().any(|w| w.contains("zoom.default_zoom")));
+    }
+
+    #[test]
+    fn invalid_max_zoom_falls_back_to_existing_limit() {
+        let (config, warnings) = Config::from_toml_collect(
+            r#"
+            [zoom]
+            max_zoom = inf
+        "#,
+        )
+        .unwrap();
+        assert_eq!(config.max_zoom, crate::canvas::MAX_ZOOM);
+        assert!(warnings.iter().any(|w| w.contains("zoom.max_zoom")));
     }
 
     #[test]

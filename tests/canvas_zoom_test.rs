@@ -153,7 +153,7 @@ fn zoom_to_fit_single_small_window() {
     // min = 4.4, clamped to MAX_ZOOM (1.0)
     let bbox = Rectangle::new((0, 0).into(), (200, 200).into());
     let viewport = Size::<i32, Logical>::from((1920, 1080));
-    assert_eq!(zoom_to_fit(bbox, viewport, 100.0), 1.0);
+    assert_eq!(zoom_to_fit(bbox, viewport, 100.0, 1.0), 1.0);
 }
 
 #[test]
@@ -163,7 +163,7 @@ fn zoom_to_fit_windows_wider_than_viewport() {
     // min = 0.43
     let bbox = Rectangle::new((0, 0).into(), (4000, 200).into());
     let viewport = Size::<i32, Logical>::from((1920, 1080));
-    let z = zoom_to_fit(bbox, viewport, 100.0);
+    let z = zoom_to_fit(bbox, viewport, 100.0, 1.0);
     assert!((z - 1720.0 / 4000.0).abs() < 1e-10);
 }
 
@@ -172,7 +172,7 @@ fn zoom_to_fit_clamps_to_min_zoom() {
     // Enormous bbox — zoom_to_fit now goes as low as needed (only floor clamp)
     let bbox = Rectangle::new((0, 0).into(), (100000, 100000).into());
     let viewport = Size::<i32, Logical>::from((1920, 1080));
-    let z = zoom_to_fit(bbox, viewport, 100.0);
+    let z = zoom_to_fit(bbox, viewport, 100.0, 1.0);
     // 880 / 100000 ≈ 0.0088
     assert!(z > MIN_ZOOM_FLOOR);
     assert!(z < 0.02);
@@ -184,7 +184,7 @@ fn zoom_to_fit_spread_windows() {
     // avail = 1720x880 → zoom_x ≈ 0.573, zoom_y = 0.44
     let bbox = Rectangle::new((-500, -500).into(), (3000, 2000).into());
     let viewport = Size::<i32, Logical>::from((1920, 1080));
-    let z = zoom_to_fit(bbox, viewport, 100.0);
+    let z = zoom_to_fit(bbox, viewport, 100.0, 1.0);
     let expected = (880.0 / 2000.0_f64).min(1720.0 / 3000.0);
     assert!((z - expected).abs() < 1e-10);
 }
@@ -202,7 +202,7 @@ fn zoom_to_fit_padding_is_viewport_px_not_canvas_px() {
     // px of gutter on each side — invariant over bbox size.
     let bbox = Rectangle::new((0, 0).into(), (4000, 4000).into());
     let viewport = Size::<i32, Logical>::from((1000, 1000));
-    let z = zoom_to_fit(bbox, viewport, 100.0);
+    let z = zoom_to_fit(bbox, viewport, 100.0, 1.0);
     assert!((z - 0.2).abs() < 1e-10);
     // Verify the gutter is exactly 100 screen px.
     let rendered = bbox.size.w as f64 * z;

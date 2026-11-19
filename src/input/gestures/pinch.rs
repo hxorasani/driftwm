@@ -117,7 +117,7 @@ impl DriftWm {
                 }
 
                 let scaled = 1.0 + (scale - 1.0) * self.config.zoom_trackpad_speed;
-                let new_zoom = (initial_zoom * scaled).clamp(min_zoom, canvas::MAX_ZOOM);
+                let new_zoom = (initial_zoom * scaled).clamp(min_zoom, self.config.max_zoom);
 
                 let (cur_zoom, cur_camera) = self.gesture_camera_zoom();
                 if new_zoom != cur_zoom {

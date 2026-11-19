@@ -196,6 +196,8 @@ pub(super) struct SessionFileConfig {
 #[derive(Serialize, Deserialize, Default)]
 #[serde(default, deny_unknown_fields)]
 pub(super) struct ZoomConfig {
+    pub default_zoom: Option<f64>,
+    pub max_zoom: Option<f64>,
     pub step: Option<f64>,
     pub fit_padding: Option<f64>,
     pub reset_on_new_window: Option<bool>,
