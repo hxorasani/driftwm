@@ -440,7 +440,7 @@ pub fn all_windows_bbox(
 /// Zoom level that fits `bbox` inside `viewport` with `padding` viewport pixels
 /// on each side. Padding is screen-space so the gutter stays constant regardless
 /// of the resulting zoom.
-/// Clamped to [MIN_ZOOM_FLOOR, MAX_ZOOM] — zooms out as far as needed to fit.
+/// Clamped to [MIN_ZOOM_FLOOR, max_zoom] — zooms out as far as needed to fit.
 pub fn zoom_to_fit(
     bbox: Rectangle<i32, Logical>,
     viewport_size: Size<i32, Logical>,
