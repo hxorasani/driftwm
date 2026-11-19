@@ -1590,6 +1590,52 @@ mod tests {
     }
 
     #[test]
+    fn zoom_defaults_preserve_existing_behavior() {
+        let config = Config::default();
+        assert_eq!(config.default_zoom, 1.0);
+        assert_eq!(config.max_zoom, crate::canvas::MAX_ZOOM);
+    }
+
+    #[test]
+    fn zoom_range_is_configurable_and_default_is_clamped_to_it() {
+        let (config, warnings) = Config::from_toml_collect(
+            r#"
+            [zoom]
+            default_zoom = 0.75
+            max_zoom = 3.0
+        "#,
+        )
+        .unwrap();
+        assert_eq!(config.default_zoom, 0.75);
+        assert_eq!(config.max_zoom, 3.0);
+        assert!(warnings.is_empty(), "unexpected warnings: {warnings:?}");
+
+        let (config, warnings) = Config::from_toml_collect(
+            r#"
+            [zoom]
+            default_zoom = 4.0
+            max_zoom = 2.0
+        "#,
+        )
+        .unwrap();
+        assert_eq!(config.default_zoom, 2.0);
+        assert!(warnings.iter().any(|w| w.contains("zoom.default_zoom")));
+    }
+
+    #[test]
+    fn invalid_max_zoom_falls_back_to_existing_limit() {
+        let (config, warnings) = Config::from_toml_collect(
+            r#"
+            [zoom]
+            max_zoom = inf
+        "#,
+        )
+        .unwrap();
+        assert_eq!(config.max_zoom, crate::canvas::MAX_ZOOM);
+        assert!(warnings.iter().any(|w| w.contains("zoom.max_zoom")));
+    }
+
+    #[test]
     fn out_of_range_navigation_values_warn_and_clamp() {
         let toml_str = r#"
             [navigation]
