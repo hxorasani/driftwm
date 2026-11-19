@@ -207,6 +207,10 @@ pub struct Config {
     /// Modifiers held during Alt-Tab window cycling, derived from the
     /// `cycle-windows forward` binding. Releasing them commits the selection.
     pub cycle_hold: Modifiers,
+    /// Zoom used by reset and intentional navigation.
+    pub default_zoom: f64,
+    /// Maximum permitted zoom level.
+    pub max_zoom: f64,
     /// Zoom step multiplier per keypress. 1.1 = 10% per press.
     pub zoom_step: f64,
     /// Touchscreen gesture zoom speed multiplier.
@@ -526,6 +530,29 @@ impl Config {
                 }
             },
         };
+
+        let max_zoom = match raw.zoom.max_zoom {
+            Some(value) if value.is_finite() && value >= crate::canvas::MIN_ZOOM_FLOOR => value,
+            Some(value) => {
+                collect_warn(
+                    &mut errors,
+                    format!(
+                        "config: zoom.max_zoom {value} must be finite and at least {}, using {}",
+                        crate::canvas::MIN_ZOOM_FLOOR,
+                        crate::canvas::MAX_ZOOM
+                    ),
+                );
+                crate::canvas::MAX_ZOOM
+            }
+            None => crate::canvas::MAX_ZOOM,
+        };
+        let default_zoom = clamp_warn(
+            raw.zoom.default_zoom.unwrap_or(1.0),
+            crate::canvas::MIN_ZOOM_FLOOR,
+            max_zoom,
+            "zoom.default_zoom",
+            &mut errors,
+        );
 
         let mut disable_keys = false;
         let mut disable_mouse = false;
@@ -1151,6 +1178,8 @@ impl Config {
             auto_navigate_on_close: raw.navigation.auto_navigate_on_close.unwrap_or(true),
             auto_navigate_on_click: raw.navigation.auto_navigate_on_click.unwrap_or(false),
             cycle_hold,
+            default_zoom,
+            max_zoom,
             zoom_step: non_negative(raw.zoom.step.unwrap_or(1.1), "zoom.step", &mut errors),
             zoom_touch_speed: non_negative(
                 raw.zoom.touch_speed.unwrap_or(1.0),
@@ -1174,13 +1203,12 @@ impl Config {
             ),
             zoom_reset_on_new_window: raw.zoom.reset_on_new_window.unwrap_or(false),
             zoom_reset_on_activation: raw.zoom.reset_on_activation.unwrap_or(true),
-            // clamp_warn (not non_negative): folds NaN into the below-min branch
-            // → 0.0 → off, and rejects values above MAX_ZOOM rather than
-            // silently accepting a threshold no zoom can ever fall below.
+            // clamp_warn folds NaN into the below-min branch and rejects thresholds
+            // above the configured maximum zoom.
             zoom_interact_min: clamp_warn(
                 raw.zoom.interact_min.unwrap_or(0.5),
                 0.0,
-                crate::canvas::MAX_ZOOM,
+                max_zoom,
                 "zoom.interact_min",
                 &mut errors,
             ),
