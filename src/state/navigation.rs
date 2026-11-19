@@ -398,7 +398,7 @@ impl DriftWm {
     /// live zoom would stop a zoom animation where this frame caught it.
     pub(crate) fn navigation_target_zoom(&self, output: &Output, reset_zoom: bool) -> f64 {
         if reset_zoom {
-            1.0
+            self.config.default_zoom
         } else {
             self.landing_view_on(output).1
         }
@@ -755,6 +755,7 @@ impl DriftWm {
                 }),
             viewport,
             self.config.zoom_fit_padding,
+            self.config.max_zoom,
         )
     }
 
