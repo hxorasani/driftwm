@@ -381,7 +381,7 @@ impl TouchGestureGrab {
         }
         let zoom = output_state(&self.output).zoom;
         let new_zoom = (zoom * (1.0 + (scale - 1.0) * data.config.zoom_touch_speed))
-            .clamp(data.min_zoom(), canvas::MAX_ZOOM);
+            .clamp(data.min_zoom(), data.config.max_zoom);
         if new_zoom != zoom {
             data.user_moved_camera();
         }
