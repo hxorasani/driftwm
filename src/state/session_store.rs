@@ -962,6 +962,6 @@ mod tests {
     #[test]
     fn a_view_left_beside_a_window_past_the_camera_range_is_restored() {
         let camera = Point::from((CAMERA_LIMIT + 2e7, 0.0));
-        assert!(valid_camera_seed(camera, 1.0));
+        assert!(valid_camera_seed(camera, 1.0, 1.0));
     }
 }
