@@ -366,7 +366,7 @@ fn cmd_zoom(arg: Option<f64>, state: &mut DriftWm) -> Reply {
                 state.exit_fullscreen();
             }
             // Same bounds as keyboard/gesture zoom; reply reports what was applied.
-            let clamped = zoom.clamp(state.min_zoom(), driftwm::canvas::MAX_ZOOM);
+            let clamped = zoom.clamp(state.min_zoom(), state.config.max_zoom);
             // Anchor on the viewport center (like keyboard zoom) so the center
             // stays put — otherwise zoom drifts the camera off the `camera` point.
             state.zoom_to_anchored(clamped);
